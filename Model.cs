@@ -22,8 +22,9 @@ namespace ConsoleApplication1
         double[] values;
         double[] trend;
         protected Model seasonal;
-        int limit;
+
         int freq;
+        public int len;
         private void decompose(int n, int freq, double[] season_)
         {
             int swindow = 10 * n + 1;
@@ -31,9 +32,8 @@ namespace ConsoleApplication1
             double[] seaonal = new double[freq];
             int[] count = new int[freq];
             int limit = (int)Math.Ceiling((double)n / freq);
-            this.limit = limit;
             this.freq = freq;
-            
+            this.len = n;
             unsafe
             {
                 double* y = (double*)utils.Memory.Alloc(sizeof(double) * n);
@@ -62,7 +62,7 @@ namespace ConsoleApplication1
                         t2 /= l;
                         values[i] = (t2 + t1) / 2;
                     }
-                } 
+                }
                 if (type == ModelType.Implicit)
                 {
                     double[] x = ChebyshevReg.Solve(values);
@@ -105,10 +105,9 @@ namespace ConsoleApplication1
                 utils.Memory.Free(y);
                 utils.Memory.Free(s);
                 utils.Memory.Free(t);
-
             }
-
         }
+
         public Model(TimeSeries ts)
         {
             this.ts = ts;
@@ -120,26 +119,26 @@ namespace ConsoleApplication1
             double min = double.MaxValue;
             foreach (ModelType t in Enum.GetValues(typeof(ModelType)))
             {
-                this.type = t;                
+                this.type = t;
                 this.Solve();
                 this.CalcError();
                 double rt = this.Size() * Error(0.9);
                 if (min > rt) { min = rt; best = t; }
             }
-
             this.type = best;
             this.Solve();
             this.CalcError();
+            this.len = ts.Length;
         }
 
         public int countError(double error)
         {
             int count = 0;
             if (errors == null) ; CalcError();
-            
+
             for (int i = 0; i < ts.Length; i++)
             {
-               if( errors[i]<error) count++;
+                if (errors[i] < error) count++;
             }
 
             return count;
@@ -192,7 +191,6 @@ namespace ConsoleApplication1
                 }
             }
         }
-
 
         public double Eval(int x)
         {
@@ -277,42 +275,61 @@ namespace ConsoleApplication1
     class ModelSet
     {
         TimeSeries ts;
-        int pieces;
-        ModelType type;
-        Model[] models;
+        public Model[] models;
         double[] errors;
-        public ModelSet(TimeSeries ts, ModelType type, int pieces)
+        int len;
+        public void getModels(int len, double error, ref int length)
         {
-            this.pieces = pieces;
-            this.ts = ts;
-            this.type = type;
-            this.models = new Model[pieces];
+            length = 0;
+            int kk = (int)Math.Floor((double)ts.Length / len);
 
-            for (int i = 0; i < pieces; i++)
+            models = new Model[kk];
+            int x = 0;
+            this.len = len;
+            for (int i = 0; i < kk; i++)
             {
-                double[] u = new double[ts.Length / pieces];
-                for (int j = 0; j < ts.Length / pieces; j++) u[j] = ts.data[i * ts.Length / pieces + j];
+                if (i == kk - 1) len = ts.Length - x;
+
+                double[] u = new double[len];
+                for (int j = 0; j < len; j++) u[j] = ts.data[x++];
                 TimeSeries t = new TimeSeries(u, ts.freq);
                 Model m = new Model(t);
+                length += m.countError(error);
                 models[i] = m;
             }
 
         }
+
+        public ModelSet(TimeSeries ts)
+        {
+            this.ts = ts;
+        }
         public void Solve()
         {
-            for (int i = 0; i < pieces; i++)
+            if (models == null) return;
+            for (int i = 0; i < models.Length; i++)
             {
                 models[i].Solve();
             }
         }
         public double Eval(int x)
         {
-            int n = ts.Length / pieces;
-            int l = x / n;
-            return models[l].Eval(x % n);
+            if (models == null) throw new Exception("Empty");
+            int llen = len;
+            int l = x / len;
+            if (l >= models.Length)
+            {
+                l = models.Length - 1;
+                llen = models[l].len;
+            }
+
+            return models[l].Eval(x % llen);
         }
         public int Size()
         {
+            if (models == null) throw new Exception("Empty");
+            int pieces = models.Length;
+
             int size = 0;
             for (int i = 0; i < pieces; i++)
             {
@@ -356,14 +373,16 @@ namespace ConsoleApplication1
         {
             Console.WriteLine(ts.Length + "\t" + String.Format("{0:00.00}", Error(0.5)) + "% " + "\t" + String.Format("{0:00.00}", Error(0.9)) + "% " + "\t" + String.Format("{0:00.00}", MaxError()) + "%\t" + Size());
         }
+        public double Cost()
+        {
+            return Size() * Error(0.9);
+        }
     }
 
     class ModelTree : Model
     {
         ModelTree[] children;
         Range range;
-        double error;
-        double[] errors;
         #region old
         /*  ModelTree[] findChildren(int len, ref double max_error)
         {
@@ -442,31 +461,18 @@ namespace ConsoleApplication1
 
       }*/
         #endregion
-        Model[] getModels(int len, double error, ref int length)
+
+        void setModels(int len, double[] errors, int shift, int done)
         {
-            length = 0;
-            int kk = (int)Math.Floor((double)ts.Length / len);
-
-            Model[] c = new Model[kk];
-            int x = 0;
-
-            for (int i = 0; i < kk; i++)
+            double[] newerrors = null;
+            if (errors.Length > 1)
             {
-                if (i == kk - 1) len = ts.Length - x;
-
-                double[] u = new double[len];
-                for (int j = 0; j < len; j++) u[j] = ts.data[x++];
-                TimeSeries t = new TimeSeries(u, ts.freq);
-                Model m = new Model(t);
-                length += m.countError(error);
-                c[i] = m;
+                newerrors = new double[errors.Length - 1];
+                for (int i = 0; i < errors.Length - 1; i++)
+                {
+                    newerrors[i] = errors[i];
+                }
             }
-            return c;
-        }
-
-        void setModels(int len)
-        {
-            
             int kk = (int)Math.Floor((double)ts.Length / len);
 
             children = new ModelTree[kk];
@@ -479,44 +485,73 @@ namespace ConsoleApplication1
                 double[] u = new double[len];
                 for (int j = 0; j < len; j++) u[j] = ts.data[x++];
                 TimeSeries t = new TimeSeries(u, ts.freq);
-                ModelTree m = new ModelTree(t,null,s);
+                ModelTree m = null;
+                if (shift == 1)
+                    m = new ModelTree(t, newerrors, s);
+                else
+                    m = new ModelTree(t, errors, s);
+                if (done == 0)
+                {
+                    m.BuildTree();
+                }
                 children[i] = m;
             }
-            
         }
-        
+
         public void BuildTree()
         {
-            //start with the lowest frequncy greater than zero
+            if (errors == null) return;
             int i = 0;
-            for (int l = errors.Length - 1; l >= 0; l--)
+            int max_branching = 20;// int.MaxValue;
+            double current_error = errors[errors.Length - 1];
+            int f = 0;
+            int length = ts.Length;
+            int len = 0;
+            int best_f = 0;
+            double best_cost = double.MaxValue;
+
+
+            for (i = 0; i < ts.freq.Length; i++)
             {
-                double current_error = errors[l];
-                int length = ts.Length;
-                int len = 0;
-                int best_f = 0;
-                for (i = 0; i < ts.freq.Length; i++)
+                f = ts.freq[i];
+                if (f == 0) continue;
+                for (; ; )
                 {
-                    int f = ts.freq[i];
-                    if (f == 0) continue;
-                    for (; ; )
+                    ModelSet s = new ModelSet(ts);
+                    s.getModels(f, current_error, ref len);
+                    //
+                    if ((len >= 0.99 * length) && (s.models.Length <= max_branching))
                     {
-                        Model[] c = getModels(f, current_error, ref len);
-                        if (len >= 0.99 * length)
-                        {
+                        double cost = s.Cost();
+                        if (cost < best_cost)
                             best_f = f;
-                        }
-                        else break;
-                        f = f * 2;
-                        if (len == 0) break;
-                        if (c.Length == 1) break;
-                        if ((i + 1 < ts.freq.Length) && (f > ts.freq[i + 1])) break;
                     }
-                    Console.WriteLine(best_f);
-                    if (best_f != 0) setModels(best_f);
+                    else break;
+
+                    f = f * 2;
+                    if (len == 0) break;
+                    if ((i + 1 < ts.freq.Length) && (f > ts.freq[i + 1])) break;
                 }
             }
-           
+
+            Console.WriteLine(best_f);
+            if (best_f != 0) { setModels(best_f, errors, 1, 0); }
+            else
+            {
+                int done = 0;
+                for (; ; )
+                {
+                    ModelSet s = new ModelSet(ts);
+                    s.getModels(f, current_error, ref len);
+                    if (s.models.Length >= max_branching)
+                    {
+                        f = f * 2;
+                    }
+                    else { best_f = f; if (s.models.Length == 1) done = 1; break; }
+                }
+
+                setModels(best_f, errors, 0, done);
+            }
         }
 
         public ModelTree(TimeSeries ts, double[] errors = null, int start = 0)
