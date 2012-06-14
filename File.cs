@@ -9,13 +9,14 @@ namespace utils
 {
     class File
     {
-        public static double[] ReadData(string file)
+        public static double[] ReadData(string file, int size=int.MaxValue)
         {
             ArrayList data = new ArrayList();
             try
             {
                 // Create an instance of StreamReader to read from a file.
                 // The using statement also closes the StreamReader.
+                int i = 0;
                 using (StreamReader sr = new StreamReader(file))
                 {
                     String line;
@@ -23,7 +24,9 @@ namespace utils
                     // the file is reached.
                     while ((line = sr.ReadLine()) != null)
                     {
+                        i++;
                         data.Add(double.Parse( line));
+                        if (i > size) break;
                     }
                 }
             }

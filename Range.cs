@@ -8,5 +8,13 @@ namespace ConsoleApplication1
     class Range
     {
         public int s, e;
+
+        public Range(int s, int e)
+        { this.s = s; this.e = e; }
+
+       public override string  ToString(){
+           return "[" + s + "," + e + "]";
+    }
+    
     }
 }
