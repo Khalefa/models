@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using utils;
 using System.IO;
+using System.Xml.Serialization;
+
 
 namespace ConsoleApplication1
 {
@@ -54,6 +56,7 @@ namespace ConsoleApplication1
             }*/
 
         //}
+      
         static void computeM(string file, string fileo)
         {
             double[] uk = utils.File.ReadData(file);
@@ -129,10 +132,19 @@ namespace ConsoleApplication1
             ModelTree t = new ModelTree(ts, errors);
             t.BuildTree();
             Console.WriteLine(t.ToString());
+            t.Clean();
+            XmlSerializer x = new System.Xml.Serialization.XmlSerializer(t.GetType());
+          StreamWriter m=new StreamWriter("c:/data/a.xml");
+            x.Serialize(m, t);
+            StreamWriter mm = new StreamWriter("c:/data/b.txt");
+            t.SerializeAll();
 
+            for (int i = 0; i < Global.id;i++ )
+                mm.WriteLine(Global.ht[i]);
+            mm.Close();
             try
             {
-                using (StreamWriter sw = new StreamWriter("c:/data/print.txt"))
+                using (StreamWriter sw = new StreamWriter("c:/data/printB.txt"))
                 {
 
                     sw.WriteLine(t.ToString());

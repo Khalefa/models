@@ -8,11 +8,11 @@ using utils;
 
 namespace ConsoleApplication1
 {
-    class TimeSeries
+    public class TimeSeries
     {
         public double []data;
         public int []freq;
-        
+        public TimeSeries() { }
         public TimeSeries(int n,int []freq)
         {
             data = new double[n];
@@ -39,6 +39,14 @@ namespace ConsoleApplication1
                 Console.WriteLine("Length" + data.Length + " Freq  null");
             else
             Console.WriteLine("Length" + data.Length + " Freq " + freq[0]);
+        }
+
+        public override string ToString()
+        {
+            string s="";
+            for(int i=0;i<data.Length;i++)
+                s=s+data[i]+ " ";
+            return s;
         }
     }
 

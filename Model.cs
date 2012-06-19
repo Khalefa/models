@@ -6,25 +6,28 @@ using System.Text;
 using stllib;
 namespace ConsoleApplication1
 {
+
     public enum ModelType
     {
         Explicit, Implicit, Trend
     };
-    class ModelBase
+    public class ModelBase
     {
     }
-    class Model : ModelBase
+    public class Model : ModelBase
     {
-        protected TimeSeries ts;
-        protected ModelType type;
+        public int id;
+        public TimeSeries ts;
+        public ModelType type;
 
-        protected double[] errors;
-        double[] values;
-        double[] trend;
-        protected Model seasonal;
-
-        int freq;
+        public double[] errors;
+        public double[] values;
+        public double[] trend;
+        public Model seasonal;
+        public int freq;
         public int len;
+        public double error;
+        #region code
         private void decompose(int n, int freq, double[] season_)
         {
             int swindow = 10 * n + 1;
@@ -107,7 +110,6 @@ namespace ConsoleApplication1
                 utils.Memory.Free(t);
             }
         }
-
         public Model(TimeSeries ts)
         {
             this.ts = ts;
@@ -130,7 +132,6 @@ namespace ConsoleApplication1
             this.CalcError();
             this.len = ts.Length;
         }
-
         public int countError(double error)
         {
             int count = 0;
@@ -191,7 +192,16 @@ namespace ConsoleApplication1
                 }
             }
         }
-
+        public virtual void Clean()
+        {
+            error = Error(0.9);
+            id = Global.id;
+            Global.id++;
+            errors = null;
+            trend = null;
+            if ((seasonal != null) && (values != null)) { ts = null; }
+            if (seasonal != null) seasonal.Clean();
+        }
         public double Eval(int x)
         {
             if (seasonal == null && values == null) return ts.data[x];
@@ -270,6 +280,60 @@ namespace ConsoleApplication1
         {
             utils.File.WriteData("c:/data/d1", ts.freq[0], ts.data, trend, seasonal.ts.data, errors);
         }
+        #endregion
+        public string ToString(string h)
+        {
+            String s = h + "len:" + len + "freq: " + freq + " Values:";
+            if (values != null)
+            {
+                for (int i = 0; i < values.Length; i++)
+                    s = s + values[i] + " " + values[i];
+            }
+            else s = s + "null";
+            s = s + "\n" + h;
+            if (seasonal != null)
+                s = s + "\tseasonal: " + seasonal.ToString("");
+            else s = s + "\tseasonal: null";
+            s = s + "\n" + h;
+            if (seasonal == null && values == null)
+                s = s + "ts:" + ts.ToString();
+            s = s + "\n";
+            return s;
+        }
+        public int Type()
+        {
+            if (type == ModelType.Explicit) return 0;
+            if (type == ModelType.Trend) return 1;
+            return 2;
+        }
+        public string Serialize()
+        {
+            string m = "";
+            string s = "" + "";
+            string c = "";
+            string v = "";
+
+            int l = 0;
+            int l_ts = 0;
+            int c_count = 0;
+
+            if (values != null) l = values.Length;
+            if (ts != null) l_ts = ts.Length;
+            if (seasonal == null) s = "-1";
+            else s = "" + seasonal.id;
+             c = "" + "0"; c_count = 0; 
+            
+
+            string ts_ = "" + l_ts + " ";
+            v = l + " ";
+            m = "" + id + " " +  Type() + " " + -1 + " " + -1 + " " + "" + error + " " + "" + freq;
+            for (int i = 0; i < l; i++) v += "" + values[i] + " ";
+            for (int i = 0; i < l_ts; i++) ts_ += "" + ts.data[i] + " ";
+
+            if (seasonal != null) { Global.ht.Add(seasonal. id, seasonal.Serialize()); }
+            return m + " " + s + " " + v + " " + ts_ + " " + c;
+        }
+        
     }
 
     class ModelSet
@@ -378,11 +442,10 @@ namespace ConsoleApplication1
             return Size() * Error(0.9);
         }
     }
-
-    class ModelTree : Model
+    public class ModelTree : Model
     {
-        ModelTree[] children;
-        Range range;
+        public ModelTree[] children;
+        public Range range;
         #region old
         /*  ModelTree[] findChildren(int len, ref double max_error)
         {
@@ -502,7 +565,7 @@ namespace ConsoleApplication1
         {
             if (errors == null) return;
             int i = 0;
-            int max_branching = 20;// int.MaxValue;
+            int max_branching = int.MaxValue;
             double current_error = errors[errors.Length - 1];
             int f = 0;
             int length = ts.Length;
@@ -553,7 +616,7 @@ namespace ConsoleApplication1
                 setModels(best_f, errors, 0, done);
             }
         }
-
+        public ModelTree() { }
         public ModelTree(TimeSeries ts, double[] errors = null, int start = 0)
             : base(ts)
         {
@@ -568,16 +631,27 @@ namespace ConsoleApplication1
 
             return size;
         }
+        public override void Clean()
+        {
+            base.Clean();
+            if (children != null)
+            {
+                foreach (ModelTree m in children) m.Clean();
+            }
+        }
         public string ToString(int indent = 0)
         {
             string h = indent + " ";
-            for (int i = 0; i < indent; i++) h += "\t";
+            string hh = indent + " ";
+            for (int i = 0; i < indent; i++) { h += "\t"; hh += "\t"; }
             int k = 0;
             if (children != null)
             {
                 k = children.Length;
             }
             string s = h + "Model Error:" + Error(0.9) + "%" + range.ToString() + " " + Size() + " " + type + " " + k + "\n";
+            //string s_mo =  "\t" + this.ToString(hh)+ "\n";
+            //s =  s + s_mo;
             if (children == null)
             {
                 return s;
@@ -589,6 +663,40 @@ namespace ConsoleApplication1
             }
             return s;
         }
-    }
 
+        public  string Serialize()
+        {
+            string m = "";
+            string s = "" + "";
+            string c = "";
+            string v = "";
+
+            int l = 0;
+            int l_ts = 0;
+            int c_count=0;
+
+            if (values != null) l = values.Length;
+            if (ts != null) l_ts = ts.Length;
+            if (seasonal == null) s = "-1";
+            else s = "" + seasonal.id;
+            if (children == null) { c = "" + "0"; c_count = 0; }
+            else {c = "" + children.Length; c_count = children.Length; }
+            
+            string ts_ = "" + l_ts + " ";
+            v = l + " ";
+            m = "" + id + " " + Type() + " " + range.s +" " +range.e+ " " +"" + error + " " + "" + freq;
+            for (int i = 0; i < l; i++) v += "" + values[i] + " ";
+            for (int i = 0; i < l_ts; i++) ts_ += "" + ts.data[i] + " ";
+            for (int i = 0; i < c_count; i++) c += "" + children[i].id + " ";
+
+            if (seasonal != null) { Global.ht.Add(seasonal.id, seasonal.Serialize()); }
+            return m + " " + s + " " + v + " " + ts_+" "+c;
+        }
+        public void SerializeAll()
+        {
+            Global.ht.Add(this.id, this.Serialize());
+            if(children != null)
+            foreach (ModelTree m in children) m.SerializeAll();
+        }
+    }
 }

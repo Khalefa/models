@@ -5,10 +5,10 @@ using System.Text;
 
 namespace ConsoleApplication1
 {
-    class Range
+    public class Range
     {
         public int s, e;
-
+        public Range() { }
         public Range(int s, int e)
         { this.s = s; this.e = e; }
 
