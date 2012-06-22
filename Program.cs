@@ -138,7 +138,7 @@ namespace ConsoleApplication1
             x.Serialize(m, t);
             StreamWriter mm = new StreamWriter("c:/data/b.txt");
             t.SerializeAll();
-
+            mm.WriteLine(Global.id);
             for (int i = 0; i < Global.id;i++ )
                 mm.WriteLine(Global.ht[i]);
             mm.Close();
@@ -156,6 +156,22 @@ namespace ConsoleApplication1
                 Console.WriteLine("The file could not be written:");
                 Console.WriteLine(e.Message);
             }
+            try
+            {
+                using (StreamWriter sw = new StreamWriter("c:/data/printc.txt"))
+                {
+                    for(int i=0;i<100*1000;i++) 
+                    sw.WriteLine(i+" "+t.EvalProb(i,2));
+                            
+                }
+            }
+            catch (Exception e)
+            {
+                // Let the user know what went wrong.
+                Console.WriteLine("The file could not be written:");
+                Console.WriteLine(e.Message);
+            }
+            
         }
     }
 }

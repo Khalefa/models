@@ -326,7 +326,7 @@ namespace ConsoleApplication1
 
             string ts_ = "" + l_ts + " ";
             v = l + " ";
-            m = "" + id + " " +  Type() + " " + -1 + " " + -1 + " " + "" + error + " " + "" + freq;
+            m = "" + id + " " +  Type() + " " + -1  + " " + "" + error + " " + "" + freq;
             for (int i = 0; i < l; i++) v += "" + values[i] + " ";
             for (int i = 0; i < l_ts; i++) ts_ += "" + ts.data[i] + " ";
 
@@ -667,7 +667,7 @@ namespace ConsoleApplication1
         public  string Serialize()
         {
             string m = "";
-            string s = "" + "";
+            string s = "";
             string c = "";
             string v = "";
 
@@ -680,11 +680,11 @@ namespace ConsoleApplication1
             if (seasonal == null) s = "-1";
             else s = "" + seasonal.id;
             if (children == null) { c = "" + "0"; c_count = 0; }
-            else {c = "" + children.Length; c_count = children.Length; }
+            else {c = "" + children.Length+" "; c_count = children.Length; }
             
             string ts_ = "" + l_ts + " ";
             v = l + " ";
-            m = "" + id + " " + Type() + " " + range.s +" " +range.e+ " " +"" + error + " " + "" + freq;
+            m = "" + id + " " + Type() + " " + len+ " " +"" + error + " " + "" + freq;
             for (int i = 0; i < l; i++) v += "" + values[i] + " ";
             for (int i = 0; i < l_ts; i++) ts_ += "" + ts.data[i] + " ";
             for (int i = 0; i < c_count; i++) c += "" + children[i].id + " ";
@@ -698,5 +698,34 @@ namespace ConsoleApplication1
             if(children != null)
             foreach (ModelTree m in children) m.SerializeAll();
         }
+
+  public      double EvalProb(int x,  double err)
+        {
+            
+            double e = base.error;
+            double y = Eval(x);// no need to compute the value
+
+            //	printf("Totalhe  %lf  error %lf\n",y,e);
+            if (e < error) return y; // found result within the error
+            //find child
+
+            //Model* m = (Model*)&(models[j]);
+            if (this.children.Length <= 0) return -1;
+            Model mm = this.children[0];                      
+            int llen = mm.len;            
+      
+            int li = x / llen;
+            
+            if (li >= this.children.Length)
+            {
+                li = this.children.Length - 1;            
+                mm = this.children[li];
+                llen = mm.len;
+            }
+            
+            //	printf("l %d li %d\n",l,li);
+            return children[li].EvalProb( x % llen,  err);
+        }
+
     }
 }
