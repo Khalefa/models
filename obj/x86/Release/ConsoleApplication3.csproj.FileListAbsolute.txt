@@ -1,0 +1,8 @@
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\obj\x86\Release\ResolveAssemblyReference.cache
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\bin\Release\ConsoleApplication3.exe.config
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\bin\Release\ConsoleApplication3.exe
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\bin\Release\ConsoleApplication3.pdb
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\bin\Release\stllib.dll
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\bin\Release\stllib.pdb
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\obj\x86\Release\ConsoleApplication3.exe
+\\cs.aau.dk\users\mohamed\documents\visual studio 2010\Projects\ConsoleApplication3\ConsoleApplication3\obj\x86\Release\ConsoleApplication3.pdb
